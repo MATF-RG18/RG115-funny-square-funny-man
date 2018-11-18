@@ -3,26 +3,40 @@
 #include <time.h>
 #include <GL/glut.h>
 #include <math.h>
-#include<string.h>
 
 #define TIMER_ID 0
 #define TIMER_INTERVAL 20
 
-int slika[9][9] = {
-										{0, 0, 0, 1, 1, 1, 0, 0, 0},
-										{0, 0, 1, 0, 0, 0, 1, 0, 0},
-										{0, 1, 0, 0, 0, 0, 0, 1, 0},
-										{0, 1, 1, 1, 1, 1, 1, 1, 0},
-										{0, 0, 0, 0, 0, 0, 0, 0, 0},
-										{0, 0, 1, 0, 0, 0, 1, 0, 0},
-										{0, 1, 1, 1, 0, 1, 1, 1, 0},
-										{0, 0, 1, 0, 0, 0, 1, 0, 0},
-										{0, 0, 0, 0, 0, 0, 0, 0, 0}}
-										;
+int slika[][9][9] = {
+											{
+											{0, 0, 0, 1, 1, 1, 0, 0, 0},
+											{0, 0, 1, 0, 0, 0, 1, 0, 0},
+											{0, 1, 0, 0, 0, 0, 0, 1, 0},
+											{0, 1, 1, 1, 1, 1, 1, 1, 0},
+											{0, 0, 0, 0, 0, 0, 0, 0, 0},
+											{0, 0, 1, 0, 0, 0, 1, 0, 0},
+											{0, 1, 1, 1, 0, 1, 1, 1, 0},
+											{0, 0, 1, 0, 0, 0, 1, 0, 0},
+											{0, 0, 0, 0, 0, 0, 0, 0, 0}
+											},
+											{
+											{0, 0, 0, 1, 1, 1, 0, 0, 0},
+											{0, 0, 0, 1, 1, 1, 0, 0, 0},
+											{0, 0, 0, 1, 1, 1, 0, 0, 0},
+											{0, 0, 0, 1, 1, 1, 0, 0, 0},
+											{1, 0, 0, 1, 1, 1, 0, 0, 1},
+											{1, 1, 0, 1, 1, 1, 0, 1, 1},
+											{0, 1, 1, 1, 1, 1, 1, 1, 0},
+											{0, 0, 1, 1, 1, 1, 1, 0, 0},
+											{0, 0, 0, 1, 1, 1, 0, 0, 0}
+											}
+										};
 
 float animacija[9][9];
 
 int popunjenost[9];
+int trenutniLevel = 0;
+int brojLevela = 2;
 
 typedef enum b{
 	CRVENA = 0,
@@ -58,6 +72,7 @@ void restartujIgru();
 void generisiNoviBlok();
 void pomeriIgraca(int x);
 int proveriPobedu();
+void postaviLevel();
 void animacijaSlike();
 void postaviBoju(int b, float i);
 void crtajSrce();
@@ -140,17 +155,12 @@ void restartujIgru(){
 	}
 
 	zivoti = 3;
+	trenutniLevel = 0;
 	//Vraca brzinu padanja na pocetnu
 	brzinaPadanja = osnovnaBrzina;
 
-	for (int i=0; i<9; i++){
-		for (int j=0; j<9; j++){
-			animacija[i][i] = 0;
-		}
-	}
-	for (int i=0; i<9; i++){
-		popunjenost[i] = 0;
-	}
+	postaviLevel();
+
 	pozicijaIgraca = 4;
 	generisiNoviBlok();
 }
@@ -174,7 +184,7 @@ void generisiNoviBlok(){
 	//Dohvatamo boju sledeceg polja koji se nalazi u istoj koloni kao i ovaj sto se generisao
 	int x = (int)blokX;
 	int y = popunjenost[(int) blokX];
-	bojaSledeceg = slika[y][x];
+	bojaSledeceg = slika[trenutniLevel][y][x];
 	animationParametar = 0;
 }
 
@@ -226,6 +236,17 @@ void animacijaSlike(){
 	}
 }
 
+void postaviLevel(){
+	for (int i=0; i<9; i++){
+		for (int j=0; j<9; j++){
+			animacija[i][j] = 0;
+		}
+	}
+	for (int i=0; i<9; i++){
+		popunjenost[i] = 0;
+	}
+}
+
 static void on_timer(int value)
 {
     /*
@@ -240,6 +261,12 @@ static void on_timer(int value)
 		//Ako se zavrsila igra ne pomeraj vise blok koji pada
 		if (!proveriPobedu()){
 			pomeriBlok();
+		}
+		else{
+			if (trenutniLevel+1 < brojLevela){
+				trenutniLevel++;
+				postaviLevel();
+			}
 		}
 		animacijaSlike();
 
@@ -324,8 +351,8 @@ static void on_display(void)
 			}
 
 			glPushMatrix();
-			postaviBoju(slika[i][j], 0);
-			glTranslatef(j, i, slika[i][j]*0.3);
+			postaviBoju(slika[trenutniLevel][i][j], 0);
+			glTranslatef(j, i, slika[trenutniLevel][i][j]*0.3);
 			//Animacija podizanja u zavisnosti od animacija[][]
 			glTranslatef(0, -1+animacija[i][j], 0);
 			glutSolidCube(1);
@@ -403,8 +430,8 @@ static void on_display(void)
 			glPushMatrix();
 			glTranslatef(j, i, 0);
 			if (i>=0 && i < 9 && j>=0 && j<9){
-				glTranslatef(0, 0, slika[i][j]*0.3);
-				postaviBoju(slika[i][j], 0);
+				glTranslatef(0, 0, slika[trenutniLevel][i][j]*0.3);
+				postaviBoju(slika[trenutniLevel][i][j], 0);
 			}
 			glutWireCube(1);
 
