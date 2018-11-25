@@ -13,3 +13,4 @@ clean:
 
 dist: clean
 	-tar -chvj -C .. -f ../$(PROGRAM).tar.bz2 $(PROGRAM)
+

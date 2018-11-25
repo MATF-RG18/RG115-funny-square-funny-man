@@ -7,30 +7,7 @@
 #define TIMER_ID 0
 #define TIMER_INTERVAL 20
 
-int slika[][9][9] = {
-											{
-											{0, 0, 0, 1, 1, 1, 0, 0, 0},
-											{0, 0, 1, 0, 0, 0, 1, 0, 0},
-											{0, 1, 0, 0, 0, 0, 0, 1, 0},
-											{0, 1, 1, 1, 1, 1, 1, 1, 0},
-											{0, 0, 0, 0, 0, 0, 0, 0, 0},
-											{0, 0, 1, 0, 0, 0, 1, 0, 0},
-											{0, 1, 1, 1, 0, 1, 1, 1, 0},
-											{0, 0, 1, 0, 0, 0, 1, 0, 0},
-											{0, 0, 0, 0, 0, 0, 0, 0, 0}
-											},
-											{
-											{0, 0, 0, 1, 1, 1, 0, 0, 0},
-											{0, 0, 0, 1, 1, 1, 0, 0, 0},
-											{0, 0, 0, 1, 1, 1, 0, 0, 0},
-											{0, 0, 0, 1, 1, 1, 0, 0, 0},
-											{1, 0, 0, 1, 1, 1, 0, 0, 1},
-											{1, 1, 0, 1, 1, 1, 0, 1, 1},
-											{0, 1, 1, 1, 1, 1, 1, 1, 0},
-											{0, 0, 1, 1, 1, 1, 1, 0, 0},
-											{0, 0, 0, 1, 1, 1, 0, 0, 0}
-											}
-										};
+int*** slika;
 
 float animacija[9][9];
 
@@ -76,6 +53,7 @@ void postaviLevel();
 void animacijaSlike();
 void postaviBoju(int b, float i);
 void crtajSrce();
+void ucitajLevele();
 
 int main(int argc, char **argv)
 {
@@ -94,7 +72,6 @@ int main(int argc, char **argv)
 
   /* Na pocetku je animacija neaktivna */
   animation_ongoing = 1;
-
   /* Obavlja se OpenGL inicijalizacija. */
   glClearColor(0.3, 0.3, 0.3, 0);
 	glShadeModel(GL_SMOOTH);
@@ -108,6 +85,7 @@ int main(int argc, char **argv)
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
 	/* Ulazi se u glavnu petlju. */
+	ucitajLevele();
 	restartujIgru();
 
 	on_timer(TIMER_ID);
@@ -116,6 +94,29 @@ int main(int argc, char **argv)
 	return 0;
 }
 
+void ucitajLevele(){
+	FILE* f = fopen("levels.txt", "r");
+	int n;
+	fscanf(f, "%d", &n);
+	slika = malloc(n*sizeof(int**));
+	//Alokacija
+	for (int i=0; i<n; i++){
+		slika[i] = malloc(9*sizeof(int*));
+		for (int j=0; j<9; j++){
+			slika[i][j] = malloc(9*sizeof(int));
+		}
+	}
+
+	//Ucitavanje
+
+	for (int i=0; i<n; i++){
+		for (int j=8; j>=0; j--){
+			for (int k=0; k<9; k++){
+				fscanf(f, "%d", &slika[i][j][k]);
+			}
+		}
+	}
+}
 
 static void on_keyboard(unsigned char key, int x, int y)
 {
@@ -271,7 +272,7 @@ static void on_timer(int value)
 		animacijaSlike();
 
 		animationParametar += 0.1;
-		brzinaPadanja += 0.00001;
+		brzinaPadanja += 0.00001; 
     /* Po potrebi se ponovo postavlja tajmer. */
     if (animation_ongoing) {
         glutTimerFunc(TIMER_INTERVAL, on_timer, TIMER_ID);
