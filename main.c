@@ -98,6 +98,7 @@ void ucitajLevele(){
 	FILE* f = fopen("levels.txt", "r");
 	int n;
 	fscanf(f, "%d", &n);
+	brojLevela = n;
 	slika = malloc(n*sizeof(int**));
 	//Alokacija
 	for (int i=0; i<n; i++){
@@ -267,12 +268,13 @@ static void on_timer(int value)
 			if (trenutniLevel+1 < brojLevela){
 				trenutniLevel++;
 				postaviLevel();
+				generisiNoviBlok();
 			}
 		}
 		animacijaSlike();
 
 		animationParametar += 0.1;
-		brzinaPadanja += 0.00001; 
+		brzinaPadanja += 0.00001;
     /* Po potrebi se ponovo postavlja tajmer. */
     if (animation_ongoing) {
         glutTimerFunc(TIMER_INTERVAL, on_timer, TIMER_ID);
