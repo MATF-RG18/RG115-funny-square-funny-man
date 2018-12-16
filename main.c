@@ -3,7 +3,7 @@
 #include <time.h>
 #include <GL/glut.h>
 #include <math.h>
-
+#include<string.h>
 #define TIMER_ID 0
 #define TIMER_INTERVAL 20
 
@@ -23,6 +23,16 @@ typedef enum b{
 	CRNA = 4,
 	BELA = 5
 } Boja;
+
+typedef enum k{
+	NORMALNA,
+	PRELAZAK,
+	KRAJ
+} StanjeKamere;
+
+StanjeKamere stanjeKamere = NORMALNA;
+float animacijaKamere = 0;
+
 int brojBoja = 6;
 
 int width, height;
@@ -53,6 +63,8 @@ void postaviLevel();
 void animacijaSlike();
 void postaviBoju(int b, float i);
 void crtajSrce();
+void crtajBlokove();
+void crtajMrezu();
 void ucitajLevele();
 
 int main(int argc, char **argv)
@@ -113,7 +125,7 @@ void ucitajLevele(){
 	for (int i=0; i<n; i++){
 		for (int j=8; j>=0; j--){
 			for (int k=0; k<9; k++){
-				fscanf(f, "%d", &slika[i][j][k]);
+				fscanf(f, "%d", &slika[n-i-1][j][k]);
 			}
 		}
 	}
@@ -134,8 +146,14 @@ static void on_keyboard(unsigned char key, int x, int y)
 		case 'd':
 		case 'D':
 			/* Zavrsava se program. */
-			pomeriIgraca(1);
+		pomeriIgraca(1);
 			break;
+		case 'r':
+		case 'R':
+			/* Zavrsava se program. */
+			restartujIgru();
+			break;
+
 	}
 }
 
@@ -155,6 +173,9 @@ void restartujIgru(){
 	while(drugaBojaSlike == prvaBojaSlike){
 		drugaBojaSlike = rand()%brojBoja;
 	}
+
+	stanjeKamere = NORMALNA;
+	animacijaKamere = 0;
 
 	zivoti = 3;
 	trenutniLevel = 0;
@@ -182,11 +203,11 @@ void generisiNoviBlok(){
 		blokX = rand() % 9;
 	}
 	blokY = 10;
-	bojaPadajuceg = rand()%2;
 	//Dohvatamo boju sledeceg polja koji se nalazi u istoj koloni kao i ovaj sto se generisao
 	int x = (int)blokX;
 	int y = popunjenost[(int) blokX];
 	bojaSledeceg = slika[trenutniLevel][y][x];
+	bojaPadajuceg = bojaSledeceg;
 	animationParametar = 0;
 }
 
@@ -257,24 +278,40 @@ static void on_timer(int value)
     if (value != TIMER_ID)
         return;
 
-    /* Forsira se ponovno iscrtavanje prozora. */
-    glutPostRedisplay();
+		if (stanjeKamere == NORMALNA){
+			//Ako se zavrsila igra ne pomeraj vise blok koji pada
+			if (!proveriPobedu()){
+				pomeriBlok();
+			}
+			else{
+				if (trenutniLevel+1 < brojLevela){
+					trenutniLevel++;
+					postaviLevel();
+					generisiNoviBlok();
+					stanjeKamere = PRELAZAK;
+				}
+				else{
+					stanjeKamere = KRAJ;
+				}
+			}
+			animacijaSlike();
 
-		//Ako se zavrsila igra ne pomeraj vise blok koji pada
-		if (!proveriPobedu()){
-			pomeriBlok();
+			animationParametar += 0.1;
+			brzinaPadanja += 0.000002;
 		}
 		else{
-			if (trenutniLevel+1 < brojLevela){
-				trenutniLevel++;
-				postaviLevel();
-				generisiNoviBlok();
+			animacijaKamere += 0.02;
+			if (animacijaKamere > 1){
+				animacijaKamere = 1;
+				if (stanjeKamere == PRELAZAK){
+					animacijaKamere = 0;
+					stanjeKamere = NORMALNA;
+				}
 			}
 		}
-		animacijaSlike();
 
-		animationParametar += 0.1;
-		brzinaPadanja += 0.00001;
+		/* Forsira se ponovno iscrtavanje prozora. */
+		glutPostRedisplay();
     /* Po potrebi se ponovo postavlja tajmer. */
     if (animation_ongoing) {
         glutTimerFunc(TIMER_INTERVAL, on_timer, TIMER_ID);
@@ -341,29 +378,36 @@ static void on_display(void)
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	gluLookAt(4, 4, 10,
-						4, 4, 0,
-						0, 1, 0);
+	//U zavisnosti od stanjeKamere pomeramo menjamo njenu poziciju
+	//Ako je NORMALNA to znaci da se igra trenutni level
+	//Ako je PRELAZAK to znaci da smo zavrsili level i kamera treba da se pomeri na sledeci
+	//Ako je KRAJ to znaci da smo zavrsili sve levele i kamera treba da se udalji da bi se videla cela slika
 
-	//Crta blokove slike
-	for (int i=0; i<9; i++){
-		for (int j=0; j<9; j++){
-			//Prekace iscrtavanje bloka slike ako se jos nije popunio
-			if (i >= popunjenost[j]){
-				continue;
-			}
-
-			glPushMatrix();
-			postaviBoju(slika[trenutniLevel][i][j], 0);
-			glTranslatef(j, i, slika[trenutniLevel][i][j]*0.3);
-			//Animacija podizanja u zavisnosti od animacija[][]
-			glTranslatef(0, -1+animacija[i][j], 0);
-			glutSolidCube(1);
-
-			glPopMatrix();
-		}
+	if (stanjeKamere == NORMALNA) {
+			gluLookAt(4, 4, 10,
+				4, 4, 0,
+				0, 1, 0);
+	}
+	else if (stanjeKamere == PRELAZAK){
+		//Pomeramo kameru od prethodnog ka sledecem levelu
+		float posY = -4+animacijaKamere*8;
+		gluLookAt(4, posY, 10,
+			4, posY, 0,
+			0, 1, 0);
 	}
 
+	else{
+		//Pozicioniramo kameru tako da ide ka sredini cele slike po y
+		float posY = 4-((brojLevela-1)/2.0)*8*animacijaKamere;
+		//Pozicioniramo kameru tako da se udaljava da bi se videla cela slika
+		float posZ = 10+15*animacijaKamere;
+
+		gluLookAt(4, posY , posZ,
+			4, posY, 0,
+			0, 1, 0);
+	}
+
+	crtajBlokove();
 
 	//Crta blok koji hvata
 	glPushMatrix();
@@ -373,7 +417,8 @@ static void on_display(void)
 	postaviBoju(bojaSledeceg, intenzitet);
 	glTranslatef(pozicijaIgraca, -1, 1);
 	//glScalef(1, 0.5, 1);
-	glutSolidCube(1);
+	if (stanjeKamere != KRAJ)
+		glutSolidCube(1);
 	glPopMatrix();
 
 	//Crta blok koji pada
@@ -392,13 +437,13 @@ static void on_display(void)
 		//Ispisuje "you win" kada predjes igru
 		char* winText = "You win!";
 		glColor3f(0, 0, 0);
-		glRasterPos3f(3.5, 3.2, 4);
+		glRasterPos3f(3.5, 8, 4);
 		int n = strlen(winText);
 		for (int i = 0; i < n; i++) {
 			glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, winText[i]);
 		}
 		glColor3f(1, 1, 1);
-		glRasterPos3f(3.5, 3.2, 4.2);
+		glRasterPos3f(3.5, 8, 4.2);
 		for (int i = 0; i < n; i++) {
 			glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, winText[i]);
 		}
@@ -418,6 +463,41 @@ static void on_display(void)
 
 	glPopMatrix();
 
+	crtajMrezu();
+
+
+	glutSwapBuffers();
+}
+
+void crtajBlokove(){
+	//Crta blokove slike
+	for (int k=0; k<=trenutniLevel; k++){
+		for (int i=0; i<9; i++){
+			for (int j=0; j<9; j++){
+				//Crtamo sve blokove na svim prethodnim levelima osim na trenutnom
+				if (trenutniLevel == k){
+					//Na trenutnom levelu crtamo samo one koji su popunjeni
+					if (i >= popunjenost[j]){
+						continue;
+					}
+				}
+
+				glPushMatrix();
+				postaviBoju(slika[k][i][j], 0);
+				//Blokove sa prethodnih levela crtamo ispod trenutnog
+ 				//(trenutniLevel-k)*8 je pometaj bloka u odnosu na trenutni level
+				glTranslatef(j, i - (trenutniLevel-k)*8, slika[k][i][j]*0.3);
+				//Animacija podizanja u zavisnosti od animacija[][]
+				glTranslatef(0, -1+animacija[i][j], 0);
+				glutSolidCube(1);
+
+				glPopMatrix();
+			}
+		}
+	}
+}
+
+void crtajMrezu(){
 	//Crta resetku
 	glDisable(GL_LIGHTING);
 	postaviBoju(0, 0);
@@ -427,8 +507,8 @@ static void on_display(void)
 	glutWireCube(1);
 	glPopMatrix();
 
-	for (int i=-10; i<20; i++){
-		for (int j=-10; j<20; j++){
+	for (int i=-30; i<40; i++){
+		for (int j=-30; j<40; j++){
 			glColor3f(0.4, 0.4, 0.4);
 			glPushMatrix();
 			glTranslatef(j, i, 0);
@@ -441,7 +521,4 @@ static void on_display(void)
 			glPopMatrix();
 		}
 	}
-
-
-	glutSwapBuffers();
 }
