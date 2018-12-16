@@ -3,7 +3,7 @@
 #include <time.h>
 #include <GL/glut.h>
 #include <math.h>
-#include<string.h>
+
 #define TIMER_ID 0
 #define TIMER_INTERVAL 20
 
@@ -66,6 +66,7 @@ void crtajSrce();
 void crtajBlokove();
 void crtajMrezu();
 void ucitajLevele();
+void predjiLevel();
 
 int main(int argc, char **argv)
 {
@@ -131,6 +132,12 @@ void ucitajLevele(){
 	}
 }
 
+void predjiLevel(){
+	for (int i=0; i<9; i++){
+		popunjenost[i] = 9;
+	}
+}
+
 static void on_keyboard(unsigned char key, int x, int y)
 {
 	switch (key) {
@@ -140,20 +147,23 @@ static void on_keyboard(unsigned char key, int x, int y)
 			break;
 		case 'a':
 		case 'A':
-			/* Zavrsava se program. */
+			/* kretanje ulevo */
 			pomeriIgraca(-1);
 			break;
 		case 'd':
 		case 'D':
-			/* Zavrsava se program. */
+			/* kretanje udesno */
 		pomeriIgraca(1);
 			break;
 		case 'r':
 		case 'R':
-			/* Zavrsava se program. */
+			/* restartovanje igre . */
 			restartujIgru();
 			break;
-
+		case ' ':
+			/* Cheat za prelazak levela. */
+			predjiLevel();
+			break;
 	}
 }
 
